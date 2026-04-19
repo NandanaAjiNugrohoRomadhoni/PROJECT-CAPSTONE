@@ -45,7 +45,9 @@ export default function Page() {
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedMenu, setSelectedMenu] = useState<FoodMenu | null>(null);
   const [menuName, setMenuName] = useState("");
-  const [ingredients, setIngredients] = useState<IngredientRow[]>([{ localId: 1, item_id: null, qty_per_patient: "0" }]);
+  const [ingredients, setIngredients] = useState<IngredientRow[]>([
+    { localId: 1, item_id: null, qty_per_patient: "0" },
+  ]);
   const [successState, setSuccessState] = useState<SuccessState>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -102,14 +104,14 @@ export default function Page() {
 
       const nextMenus = (dishesResponse.data ?? []).map((dish) => {
         const dishId = Number(dish.id);
-        const ingredients = compositionMap.get(dishId) ?? [];
+        const menuIngredients = compositionMap.get(dishId) ?? [];
 
         return {
-        id: dishId,
-        name: dish.name,
-        description: buildCompositionSummary(ingredients, itemMap),
-        ingredients,
-      };
+          id: dishId,
+          name: dish.name,
+          description: buildCompositionSummary(menuIngredients, itemMap),
+          ingredients: menuIngredients,
+        };
       });
 
       setItems(itemsResponse.data ?? []);
@@ -166,11 +168,16 @@ export default function Page() {
   }
 
   function addIngredientRow() {
-    setIngredients((current) => [...current, { localId: Date.now(), item_id: null, qty_per_patient: "0" }]);
+    setIngredients((current) => [
+      ...current,
+      { localId: Date.now(), item_id: null, qty_per_patient: "0" },
+    ]);
   }
 
   function removeIngredientRow(localId: number) {
-    setIngredients((current) => (current.length === 1 ? current : current.filter((row) => row.localId !== localId)));
+    setIngredients((current) =>
+      current.length === 1 ? current : current.filter((row) => row.localId !== localId),
+    );
   }
 
   async function saveMenu() {
@@ -179,7 +186,9 @@ export default function Page() {
     const previousMenus = menus;
 
     try {
-      const validRows = ingredients.filter((row) => row.item_id !== null && Number(row.qty_per_patient) > 0);
+      const validRows = ingredients.filter(
+        (row) => row.item_id !== null && Number(row.qty_per_patient) > 0,
+      );
       if (menuName.trim() === "") throw new Error("Nama menu wajib diisi.");
       if (validRows.length === 0) throw new Error("Minimal satu komposisi bahan harus diisi.");
       const itemMap = new Map(items.map((item) => [Number(item.id), item]));
@@ -289,7 +298,7 @@ export default function Page() {
 
       setSuccessState({
         headline: "Menu Makanan Berhasil Dihapus",
-        message: `Menu ${selectedMenu.name} telah dipindahkan ke arsip.`,
+        message: `Menu ${selectedMenu.name} dihapus dari sistem.`,
       });
       await loadMenus();
       router.refresh();
@@ -312,7 +321,9 @@ export default function Page() {
         />
 
         {error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600">{error}</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600">
+            {error}
+          </div>
         ) : null}
 
         <SurfaceCard className="overflow-hidden">
@@ -360,7 +371,9 @@ export default function Page() {
           </div>
 
           <div className="flex items-center justify-between border-t bg-[#F8FAFC] px-6 py-3 text-xs text-gray-400">
-            <span>{menus.length === 0 ? 0 : 1}-{menus.length} dari {menus.length}</span>
+            <span>
+              {menus.length === 0 ? 0 : 1}-{menus.length} dari {menus.length}
+            </span>
           </div>
         </SurfaceCard>
       </div>
@@ -375,7 +388,9 @@ export default function Page() {
                   {modalMode === "create" ? "Tambah Menu Makanan" : "Edit Menu Makanan"}
                 </h2>
                 <p className="mt-2 text-sm text-slate-400">
-                  {modalMode === "create" ? "Isi detail menu dan komposisi bahan" : "Ubah nama, deskripsi, dan komposisi bahan"}
+                  {modalMode === "create"
+                    ? "Isi detail menu dan komposisi bahan"
+                    : "Ubah nama dan komposisi bahan"}
                 </p>
               </div>
               <button className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-400" onClick={closeModal} type="button">
@@ -423,7 +438,9 @@ export default function Page() {
                                 const nextItem = itemOptions.find((item) => item.id === nextItemId);
                                 setIngredients((current) =>
                                   current.map((item) =>
-                                    item.localId === row.localId ? { ...item, item_id: nextItemId, unit: nextItem?.unit } : item,
+                                    item.localId === row.localId
+                                      ? { ...item, item_id: nextItemId, unit: nextItem?.unit }
+                                      : item,
                                   ),
                                 );
                               }}
@@ -446,7 +463,9 @@ export default function Page() {
                                 onChange={(event) =>
                                   setIngredients((current) =>
                                     current.map((item) =>
-                                      item.localId === row.localId ? { ...item, qty_per_patient: event.target.value } : item,
+                                      item.localId === row.localId
+                                        ? { ...item, qty_per_patient: event.target.value }
+                                        : item,
                                     ),
                                   )
                                 }

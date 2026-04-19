@@ -1,164 +1,148 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+import sdk from "@/lib";
+import { formatDate } from "@/lib/admin-utils";
+import {
+  ExportButton,
+  FilterDate,
+  FilterSearch,
+  FilterSelect,
+  MiniActionButton,
+  Pagination,
+  StatusPill,
+  SurfaceCard,
+} from "@/components/admin/ui";
+
+type TransactionRow = Awaited<ReturnType<typeof sdk.stockTransactions.list>>["data"][number];
+type LookupRow = Awaited<ReturnType<typeof sdk.transactionTypes.list>>["data"][number];
+
 export default function Page() {
+  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [types, setTypes] = useState<LookupRow[]>([]);
+  const [statuses, setStatuses] = useState<LookupRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [transactionResponse, typeResponse, statusResponse] = await Promise.all([
+          sdk.stockTransactions.list({ perPage: 100, sortBy: "transaction_date", sortDir: "DESC" }),
+          sdk.transactionTypes.list({ paginate: false }),
+          sdk.approvalStatuses.list({ paginate: false }),
+        ]);
+
+        if (cancelled) return;
+
+        setTransactions(transactionResponse.data ?? []);
+        setTypes(typeResponse.data ?? []);
+        setStatuses(statusResponse.data ?? []);
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Gagal memuat riwayat transaksi.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const typeMap = useMemo(() => new Map(types.map((type) => [type.id, type.name])), [types]);
+  const statusMap = useMemo(() => new Map(statuses.map((status) => [status.id, status.name])), [statuses]);
+
   return (
     <div className="space-y-6">
-
-      {/* HEADER */}
       <div>
-        <h1 className="text-[22px] font-semibold text-gray-900">
-          Riwayat Transaksi Barang
-        </h1>
-        <p className="text-sm text-gray-400">
-          Riwayat transaksi barang masuk & keluar
-        </p>
+        <h1 className="text-[22px] font-semibold text-gray-900">Riwayat Transaksi Barang</h1>
+        <p className="text-sm text-gray-400">Riwayat transaksi barang masuk & keluar</p>
       </div>
 
-      {/* CARD */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600">
+          {error}
+        </div>
+      ) : null}
 
-        {/* FILTER */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200 bg-[#F9FAFB]">
-
+      <SurfaceCard className="overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 bg-[#F8FAFC] p-4">
           <div className="flex flex-wrap gap-3">
-
-            <input
-              placeholder="Cari Bahan"
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-[200px]"
-            />
-
-            <input
-              type="date"
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-            />
-
-            <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
-              <option>Semua Jenis</option>
-            </select>
-
-            <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
-              <option>Semua Status</option>
-            </select>
-
-          </div>
-
-          <button className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg text-sm hover:bg-blue-50">
-            Export Riwayat
-          </button>
-
-        </div>
-
-        {/* TABLE */}
-        <div>
-
-          {/* HEADER */}
-          <div className="grid grid-cols-12 px-4 py-3 text-xs font-semibold text-gray-500 bg-[#F1F5F9]">
-            <div className="col-span-2">ID Transaksi</div>
-            <div className="col-span-2">Tanggal</div>
-            <div className="col-span-3">Nama Bahan</div>
-            <div className="col-span-2">Jenis Bahan</div>
-            <div className="col-span-1">Status</div>
-            <div className="col-span-2 text-center">Aksi</div>
-          </div>
-
-          {/* ROWS */}
-          {data.map((item, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-12 px-4 py-3 text-sm border-t items-center hover:bg-gray-50"
-            >
-              <div className="col-span-2 font-medium text-gray-800">
-                {item.id}
-              </div>
-
-              <div className="col-span-2 text-gray-600">
-                {item.tanggal}
-              </div>
-
-              <div className="col-span-3 font-medium text-gray-800">
-                {item.nama}
-              </div>
-
-              <div className="col-span-2 text-gray-600">
-                {item.jenis}
-              </div>
-
-              <div className="col-span-1">
-                <span
-                  className={`px-2 py-1 text-xs rounded-full font-medium ${
-                    item.status === "Masuk"
-                      ? "bg-green-100 text-green-600"
-                      : "bg-red-100 text-red-600"
-                  }`}
-                >
-                  {item.status}
-                </span>
-              </div>
-
-              <div className="col-span-2 flex justify-center gap-2">
-                <button className="px-3 py-1 text-xs rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200">
-                  Detail
-                </button>
-                <button className="px-3 py-1 text-xs rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200">
-                  Edit
-                </button>
-              </div>
+            <div className="w-[200px]">
+              <FilterSearch placeholder="Cari Bahan" />
             </div>
-          ))}
-
-        </div>
-
-        {/* FOOTER */}
-        <div className="flex items-center justify-between p-4 border-t border-gray-200 text-sm text-gray-400">
-
-          <span>1–10 dari 52 item</span>
-
-          <div className="flex items-center gap-2">
-
-            <button className="px-2 py-1 border rounded">‹</button>
-
-            <button className="px-3 py-1 bg-blue-600 text-white rounded">
-              1
-            </button>
-
-            <button className="px-3 py-1 border rounded">2</button>
-            <button className="px-3 py-1 border rounded">3</button>
-            <button className="px-3 py-1 border rounded">4</button>
-
-            <button className="px-2 py-1 border rounded">›</button>
-
+            <FilterDate />
+            <FilterSelect label="Semua Jenis" />
+            <FilterSelect label="Semua Status" />
+          </div>
+          <div className="ml-auto">
+            <ExportButton>Export Riwayat</ExportButton>
           </div>
         </div>
 
-      </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[#F1F5F9] text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              <tr>
+                <th className="px-6 py-3">ID Transaksi</th>
+                <th className="px-6 py-3">Tanggal</th>
+                <th className="px-6 py-3">Tipe</th>
+                <th className="px-6 py-3">Approval</th>
+                <th className="px-6 py-3">SPK</th>
+                <th className="px-6 py-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white text-sm text-gray-700">
+              {transactions.map((item) => {
+                const typeLabel = typeMap.get(item.type_id) ?? `Tipe #${item.type_id}`;
+                const statusLabel = statusMap.get(item.approval_status_id) ?? `Status #${item.approval_status_id}`;
+                const tone =
+                  statusLabel.toLowerCase().includes("approve")
+                    ? "safe"
+                    : statusLabel.toLowerCase().includes("reject")
+                      ? "critical"
+                      : "warning";
+
+                return (
+                  <tr key={item.id} className="border-t border-gray-200 transition hover:bg-gray-50">
+                    <td className="px-6 py-4 font-medium text-gray-900">TR-{String(item.id).padStart(4, "0")}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatDate(item.transaction_date)}</td>
+                    <td className="px-6 py-4 text-gray-600">{typeLabel}</td>
+                    <td className="px-6 py-4">
+                      <StatusPill tone={tone}>{statusLabel}</StatusPill>
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">{item.spk_id ? `SPK-${item.spk_id}` : "-"}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-center gap-2">
+                        <MiniActionButton>Detail</MiniActionButton>
+                        <MiniActionButton>Edit</MiniActionButton>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!loading && transactions.length === 0 ? (
+                <tr>
+                  <td className="px-6 py-8 text-center text-gray-400" colSpan={6}>
+                    Belum ada riwayat transaksi.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        <Pagination totalLabel={`${transactions.length === 0 ? 0 : 1}-${transactions.length} dari ${transactions.length} item`} />
+      </SurfaceCard>
     </div>
   );
 }
-
-
-
-/* ================= MOCK DATA ================= */
-
-const data = [
-  {
-    id: "TR-0033",
-    tanggal: "10-03-2026",
-    nama: "Ayam, Kentang, Timun +5 lagi",
-    jenis: "BASAH",
-    status: "Keluar",
-  },
-  {
-    id: "TR-0290",
-    tanggal: "09-03-2026",
-    nama: "Bakso Sapi, Kentang, Timun +5 lagi",
-    jenis: "BASAH",
-    status: "Masuk",
-  },
-  {
-    id: "TR-0001",
-    tanggal: "12-03-2026",
-    nama: "Beras, Gula, Garam, Tepung +5 lagi",
-    jenis: "KERING",
-    status: "Keluar",
-  },
-];

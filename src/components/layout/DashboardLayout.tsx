@@ -1,11 +1,18 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 
-export default function DashboardLayout({ children }: any) {
+export default function DashboardLayout({
+  children,
+}: Readonly<{
+  children: ReactNode;
+}>) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className="flex">
@@ -16,7 +23,9 @@ export default function DashboardLayout({ children }: any) {
       {/* MAIN CONTENT */}
       <div className="flex-1 lg:ml-64 bg-[#F5F7FB] min-h-screen">
         <Navbar setOpen={setOpen} />
-        <div className="p-6">{children}</div>
+        <div key={pathname} className="animate-page-enter p-6">
+          {children}
+        </div>
       </div>
     </div>
   );
